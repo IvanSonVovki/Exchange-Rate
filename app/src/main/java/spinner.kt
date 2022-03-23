@@ -5,15 +5,19 @@ import java.util.*
 
 fun getValuteListData(valute: String, _amount: String): List<String> {
 
-     var returnList = mutableListOf<String>("","","")
+    val returnList = mutableListOf("", "", "")
+    val amount =                     //сумма в рублях
+            if (_amount.isEmpty()) {
+                1.0
+            } else {
+                _amount.replace(',', '.').toDouble()
 
-     var amount = _amount.replace(',', '.').toDouble()      //сумма в рублях
-     var nominalFirst = BigDecimal("1.0000")
-     var value = BigDecimal("0.0000")
-     var costUnit = BigDecimal("1.0000")
-     var resultConvert = BigDecimal("0.0000")
+            }
+    var nominalFirst: BigDecimal
+    var costUnit = BigDecimal("1.0000")
+    val resultConvert: BigDecimal
 
-     exchangeRateList.forEach {
+    exchangeRateList.forEach {
         if (valute == it.charCode) {
             nominalFirst = it.nominal.toBigDecimal()
             costUnit = it.value.toBigDecimal() / nominalFirst
@@ -29,9 +33,9 @@ fun getValuteListData(valute: String, _amount: String): List<String> {
         returnList[1] = "%.2f".format(resultConvert)
     }
     val symbolCurrency = Currency.getInstance(valute).symbol
-    returnList[2] = if (symbolCurrency.length > 1)"\u2BD1" else symbolCurrency
+    returnList[2] = if (symbolCurrency.length > 1) "\u2BD1" else symbolCurrency
 
 
 
     return returnList.toList()
- }
+}
