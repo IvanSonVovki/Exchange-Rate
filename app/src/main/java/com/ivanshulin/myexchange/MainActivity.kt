@@ -27,7 +27,7 @@ lateinit var spinner: Spinner
 lateinit var amount: EditText
 lateinit var resultConvert: TextView
 lateinit var btnUpdate: Button
-lateinit var tvDate: TextView
+
 lateinit var tvCurrencyRight: TextView
 lateinit var spinnerValute: ArrayAdapter<String>
 lateinit var recyclerView: RecyclerView
@@ -48,7 +48,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
             /** инициализация View **/
         recyclerView = findViewById(R.id.recycler_view)
-        tvDate = findViewById(R.id.tv_date)
+
         btnUpdate = findViewById(R.id.btn_update)
         spinner = findViewById(R.id.sp_valute)
         amount = findViewById(R.id.et_amount)
@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         updateRecycler() // загрузка списка данных для отображение в RecyclerView
 
         valuteList = getValuteList(exchangeRateList)  // получение списка валют для Spinner
-        tvDate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())?: getCurrentDate()// отображение даты обновления
+        btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())?: getCurrentDate()// отображение даты обновления
 
         spinnerValute = ArrayAdapter(this, android.R.layout.simple_spinner_item, valuteList)
         spinnerValute.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -185,7 +185,7 @@ fun getBtnUpdate() {
 
 
     val currentDate = getCurrentDate()
-    tvDate.text = currentDate
+    btnUpdate.text = currentDate
     val jsonString = getJsounString()
     exchangeRateList = date(jsonString)
 

@@ -7,41 +7,28 @@
     android:background="#3F7A4C"
     tools:context=".MainActivity">
 
-
     <TextView
         android:id="@+id/textView5"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/date_update"
+        android:layout_marginTop="4dp"
         android:gravity="end"
+        android:text="@string/date_update"
+        android:textColor="@color/white"
         android:textSize="8sp"
-        android:textColor="@color/white"
-        app:layout_constraintBottom_toTopOf="@+id/tv_date"
-        app:layout_constraintEnd_toEndOf="@+id/tv_date"
-        app:layout_constraintStart_toStartOf="@+id/tv_date" />
-
-    <TextView
-        android:id="@+id/tv_date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="TextView"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        app:layout_constraintBottom_toBottomOf="@+id/btn_update"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/btn_update"
-        app:layout_constraintTop_toTopOf="@+id/btn_update" />
+        app:layout_constraintStart_toStartOf="@+id/btn_update"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/btn_update"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Обновить"
-        app:backgroundTint="#8E6838"
+        android:layout_marginEnd="16dp"
+        android:drawableEnd="@drawable/ic_baseline_update_24"
+        android:text="@string/date_update"
+        app:backgroundTint="#2F4210"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/textView5" />
 
     <LinearLayout
         android:id="@+id/linearLayout"

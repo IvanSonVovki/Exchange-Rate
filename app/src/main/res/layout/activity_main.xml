@@ -12,46 +12,32 @@
         android:id="@+id/textView5"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:gravity="end"
         android:text="@string/date_update"
         android:textColor="@color/white"
         android:textSize="8sp"
-        app:layout_constraintBottom_toTopOf="@+id/tv_date"
-        app:layout_constraintEnd_toEndOf="@+id/tv_date"
-        app:layout_constraintStart_toStartOf="@+id/tv_date" />
-
-    <TextView
-        android:id="@+id/tv_date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="TextView"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        app:layout_constraintBottom_toBottomOf="@+id/btn_update"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/btn_update"
-        app:layout_constraintTop_toTopOf="@+id/btn_update" />
+        app:layout_constraintStart_toStartOf="@+id/btn_update"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/btn_update"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Обновить"
-        app:backgroundTint="#8E6838"
+        android:layout_marginEnd="16dp"
+        android:drawableEnd="@drawable/ic_baseline_update_24"
+        android:text="@string/date_update"
+        app:backgroundTint="#2F4210"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/textView5" />
 
     <LinearLayout
         android:id="@+id/linearLayout"
         android:layout_width="match_parent"
         android:layout_height="28sp"
         android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp"
         android:background="#4CA8BD"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/recycler_view"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn_update">
 
@@ -98,7 +84,6 @@
         android:id="@+id/recycler_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="24dp"
 
         android:layout_marginBottom="24dp"
         android:background="#08E6DF"
@@ -106,7 +91,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btn_update"
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout"
         tools:listitem="@layout/recycler_view_item" />
 
     <LinearLayout
@@ -129,10 +114,10 @@
             android:background="#D8C6C6"
             android:clickable="true"
             android:fontFamily="sans-serif-medium"
-            android:inputType="numberDecimal"
+            android:gravity="center"
 
-            android:text="@string/amount"
-            android:gravity="center" />
+            android:inputType="numberDecimal"
+            android:text="@string/amount" />
 
 
         <TextView
@@ -140,10 +125,10 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1.35"
-            android:textSize="20sp"
             android:background="#D8C6C6"
             android:gravity="center"
-            android:text="@string/tv_char_ed_left" />
+            android:text="@string/tv_char_ed_left"
+            android:textSize="20sp" />
 
         <Spinner
             android:id="@+id/sp_valute"
@@ -170,11 +155,11 @@
             android:id="@+id/tv_char_ed_right"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:textSize="20sp"
-            android:gravity="center"
-            android:background="#D8C6C6"
             android:layout_weight="1.35"
-            android:text="@string/tv_char_right" />
+            android:background="#D8C6C6"
+            android:gravity="center"
+            android:text="@string/tv_char_right"
+            android:textSize="20sp" />
 
 
     </LinearLayout>
