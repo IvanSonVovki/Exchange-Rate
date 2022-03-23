@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
 
         if (!pref.contains(Key.JSON_STRING.key)) getBtnUpdate()//обновление данных если отсутствует сохраннение в БД
+        val jsStr = pref.getString(Key.JSON_STRING.key, getJsounString()) // получение Jsop в формате String из БД
 
         Log.d("myTag", "end = ${exchangeRateList.size}")
 
@@ -74,7 +75,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
             autoUpdate()
         }
 
-        val jsStr = pref.getString(Key.JSON_STRING.key, getJsounString()) // получение Jsop в формате String из БД
 
         exchangeRateList = date(jsStr ?: getJsounString()) // заполнение списка валют с данными
 
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
 
         fun creativeListDate(): List<String> {
-            return getValuteListData(valuteList[position], amount.text.toString())
+            return getValuteListData(valuteList[position], amount.text.toString()?: "1.0")
 
         }
 
@@ -126,8 +126,9 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
                 if (event?.action == KeyEvent.ACTION_DOWN &&
                     keyCode == KeyEvent.KEYCODE_ENTER
                 ) {
-                    resultConvert.text = creativeListDate()[1]
-                    tvCurrencyRight.text = creativeListDate()[2]
+                    val listDate = creativeListDate()
+                    resultConvert.text = listDate[1]
+                    tvCurrencyRight.text = listDate[2]
 
                     resultConvert.clearFocus()
                     resultConvert.isCursorVisible = false
@@ -174,7 +175,7 @@ fun autoUpdate(){
 
             }
         },
-        50,
+        timeUpdate,
         timeUpdate
     )
     Log.d("testUpdate","1${timer== null}")
