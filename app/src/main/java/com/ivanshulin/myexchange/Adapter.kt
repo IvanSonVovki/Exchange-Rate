@@ -27,7 +27,7 @@ class CustomRecyclerAdapter(private val name: List<ExchangeRate>): RecyclerView.
         holder.textView1.text = name[position].charCode
         holder.textView2.text = name[position].name
         holder.textView3.text = name[position].nominal
-        holder.textView4.text = name[position].value
+        holder.textView4.text = "%.2f".format(name[position].value.toDouble())
     }
 
     override fun getItemCount(): Int {
