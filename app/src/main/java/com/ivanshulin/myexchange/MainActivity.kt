@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -27,7 +28,8 @@ lateinit var spinner: Spinner
 lateinit var amount: EditText
 lateinit var resultConvert: TextView
 lateinit var btnUpdate: Button
-
+lateinit var context: Context
+lateinit var showContext: Context
 lateinit var tvCurrencyRight: TextView
 lateinit var spinnerValute: ArrayAdapter<String>
 lateinit var recyclerView: RecyclerView
@@ -40,6 +42,8 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        context = this
+        showContext = applicationContext
 
         Log.d("myLog", "начало ${exchangeRateList.size}")
         // Log.d("myLog", "${exchangeRateList[0].toString()}")
@@ -57,11 +61,14 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
 
         if (!pref.contains(Key.JSON_STRING.key)) getBtnUpdate()//обновление данных если отсутствует сохраннение в БД
-        val jsStr = pref.getString(Key.JSON_STRING.key, getJsounString()) // получение Jsop в формате String из БД
+        val jsStr = pref.getString(Key.JSON_STRING.key, getJsounString()) // получение Json в формате String из БД
 
         Log.d("myTag", "end = ${exchangeRateList.size}")
 
-        autoUpdate() // запуск автообноления
+        if (isOnline(this)) {
+            autoUpdate() // запуск автообноления
+        }
+
 
          // ручное обновление
         btnUpdate.setOnClickListener {
@@ -89,14 +96,9 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         spinner.setAdapter(spinnerValute)
         spinner.onItemSelectedListener = this
 
-
         amount.setOnClickListener {
             amount.text.clear()
-
         }
-
-
-
     }
 
     private fun handleKeyEvent(view: View, keyCode: Int): Boolean {
@@ -170,6 +172,7 @@ fun autoUpdate(){
             override fun run() {
 
                 CoroutineScope(Dispatchers.Main).launch {
+
                     getBtnUpdate()
                 }
 
@@ -183,6 +186,8 @@ fun autoUpdate(){
 
 fun getBtnUpdate() {
 
+if (context != null && isOnline(context)) {
+
 
     val currentDate = getCurrentDate()
     btnUpdate.text = currentDate
@@ -191,6 +196,13 @@ fun getBtnUpdate() {
 
     saveDate(jsonString, currentDate)
     updateRecycler()
+} else {
+    var toast = Toast.makeText(showContext, "Connection error!",Toast.LENGTH_LONG)
+
+    toast.setGravity(Gravity.TOP, 0, 200)
+    toast.show()
+}
+
 
 }
 
@@ -212,13 +224,19 @@ fun getValuteList(list: List<ExchangeRate>): List<String> {
 }
 
 fun getJsounString(): String {
+
     val url = "https://www.cbr-xml-daily.ru/daily_json.js"
     var jsReturnString = ""
-    val globalJob = GlobalScope.launch {
-        jsReturnString = URL(url).readText()
-    }
-    runBlocking {
-        globalJob.join()
+    if (context != null && isOnline(context)) {
+        val globalJob = GlobalScope.launch {
+            jsReturnString = URL(url).readText()
+        }
+        runBlocking {
+            globalJob.join()
+        }
+    } else {
+//        Toast.makeText(MainActivity(), "Connection Error!",Toast.LENGTH_SHORT).show()
+
     }
 
     return jsReturnString
