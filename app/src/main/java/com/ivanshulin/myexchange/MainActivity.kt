@@ -14,8 +14,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 import org.json.JSONArray
-import org.json.JSONObject
-import org.json.JSONTokener
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
@@ -131,7 +129,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
                     val listDate = creativeListDate()
                     resultConvert.text = listDate[1]
                     tvCurrencyRight.text = listDate[2]
-
                     resultConvert.clearFocus()
                     resultConvert.isCursorVisible = false
                     handleKeyEvent(v!!, keyCode)
@@ -175,7 +172,6 @@ fun autoUpdate(){
 
                     getBtnUpdate()
                 }
-
             }
         },
         timeUpdate,
@@ -187,7 +183,6 @@ fun autoUpdate(){
 fun getBtnUpdate() {
 
 if (context != null && isOnline(context)) {
-
 
     val currentDate = getCurrentDate()
     btnUpdate.text = currentDate
@@ -213,15 +208,7 @@ fun getCurrentDate(): String {
     return sdf.format(time)
 }
 
-fun getValuteList(list: List<ExchangeRate>): List<String> {
-    var resultList = mutableListOf<String>()
-    for (obj in list) {
-        resultList.add(
-            obj.charCode
-        )
-    }
-    return resultList.toList()
-}
+
 
 fun getJsounString(): String {
 
@@ -242,45 +229,8 @@ fun getJsounString(): String {
     return jsReturnString
 }
 
-fun date(jsonString: String): List<ExchangeRate> {
-
-    val jsonObject = JSONTokener(jsonString).nextValue() as JSONObject
-
-    val jsonObject2 = jsonObject.getJSONObject("Valute")
-
-    val jsonObjectList = jsonObject2.names()
-    jsonValuteList = jsonObjectList
-
-    exchangeRateList = mutableListOf<ExchangeRate>()
-
-    // Log.d("myLog", "${jsonObject2.getString()}")
-    var resultList = mutableListOf<ExchangeRate>()
-    for (i in 0 until jsonObjectList.length()) {
 
 
-        val valute = jsonObject2.getJSONObject(jsonObjectList[i].toString())
-        resultList.add(
-            ExchangeRate(
-                id = valute.getString("ID"),
-                numCode = valute.getString("NumCode"),
-                charCode = valute.getString("CharCode"),
-                nominal = valute.getString("Nominal"),
-                name = valute.getString("Name"),
-                value = valute.getString("Value"),
-                previous = valute.getString("Previous"),
 
-                date = jsonObject.getString("Date")
-            )
-        )
-    }
-    Log.d("myLog", resultList[0].toString())
-
-    return resultList.toList()
-}
-
-enum class Key(val key: String) {
-    CURRENT_DATE("currentDate"),
-    JSON_STRING("jsonString")
-}
 
 

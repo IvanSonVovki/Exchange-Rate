@@ -1,5 +1,6 @@
 package com.ivanshulin.myexchange
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,7 @@ class CustomRecyclerAdapter(private val name: List<ExchangeRate>): RecyclerView.
         val textView2: TextView = itemView.findViewById(R.id.textView2)
         val textView3: TextView = itemView.findViewById(R.id.textView3)
         val textView4: TextView = itemView.findViewById(R.id.textView4)
+        val tvDifference: TextView = itemView.findViewById(R.id.tv_difference)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
@@ -22,12 +24,19 @@ class CustomRecyclerAdapter(private val name: List<ExchangeRate>): RecyclerView.
         return MyViewHolder(itemView)
     }
 
+    fun setColorDifference(difference: Double): Int {
+        return if (difference > 0) Color.GREEN else Color.RED
+    }
+
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
 
+        val difference = name[position].value.toDouble() - name[position].previous.toDouble()
         holder.textView1.text = name[position].charCode
         holder.textView2.text = name[position].name
         holder.textView3.text = name[position].nominal
         holder.textView4.text = "%.2f".format(name[position].value.toDouble())
+        holder.tvDifference.text = "%.4f".format(difference)
+        holder.tvDifference.setTextColor(setColorDifference(difference))
     }
 
     override fun getItemCount(): Int {
