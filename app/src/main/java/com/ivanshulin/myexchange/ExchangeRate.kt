@@ -1,10 +1,13 @@
 package com.ivanshulin.myexchange
 
 import android.util.Log
+import com.ivanshulin.myexchange.MainActivity.Companion.TAG
+import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import org.json.JSONTokener
 
-data class ExchangeRate (
+data class ExchangeRate(
     val id: String,
     val numCode: String,
     val charCode: String,
@@ -15,37 +18,35 @@ data class ExchangeRate (
     val date: String
 )
 
-fun date(jsonString: String): List<ExchangeRate> {
+fun getData(jsonString: String): List<ExchangeRate>? = try {
+    val jsonResponse = JSONTokener(jsonString).nextValue() as JSONObject
+    val jsonValute = jsonResponse.getJSONObject("Valute")
 
-    val jsonObject = JSONTokener(jsonString).nextValue() as JSONObject
+    val jsonObjectList = jsonValute.names()
 
-    val jsonObject2 = jsonObject.getJSONObject("Valute")
+    val resultList = mutableListOf<ExchangeRate>()
+    if (jsonObjectList != null) {
+        for (i in 0 until jsonObjectList.length()) {
 
-    val jsonObjectList = jsonObject2.names()
-    jsonValuteList = jsonObjectList
-
-    exchangeRateList = mutableListOf<ExchangeRate>()
-
-    // Log.d("myLog", "${jsonObject2.getString()}")
-    var resultList = mutableListOf<ExchangeRate>()
-    for (i in 0 until jsonObjectList.length()) {
-
-
-        val valute = jsonObject2.getJSONObject(jsonObjectList[i].toString())
-        resultList.add(
+            val valute = jsonValute.getJSONObject(jsonObjectList[i].toString())
+            resultList.add(
                 ExchangeRate(
-                        id = valute.getString("ID"),
-                        numCode = valute.getString("NumCode"),
-                        charCode = valute.getString("CharCode"),
-                        nominal = valute.getString("Nominal"),
-                        name = valute.getString("Name"),
-                        value = valute.getString("Value"),
-                        previous = valute.getString("Previous"),
-                        date = jsonObject.getString("Date")
+                    id = valute.getString("ID"),
+                    numCode = valute.getString("NumCode"),
+                    charCode = valute.getString("CharCode"),
+                    nominal = valute.getString("Nominal"),
+                    name = valute.getString("Name"),
+                    value = valute.getString("Value"),
+                    previous = valute.getString("Previous"),
+                    date = jsonResponse.getString("Date")
                 )
-        )
-    }
-    Log.d("myLog", resultList[0].toString())
+            )
 
-    return resultList.toList()
+        }
+    }
+    Log.d(TAG, resultList[0].toString())
+
+    resultList.toList()
+} catch (exception: JSONException) {
+    null
 }

@@ -10,88 +10,90 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.*
-import org.json.JSONArray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-lateinit var pref: SharedPreferences
-var exchangeRateList = listOf<ExchangeRate>()
-var jsonValuteList: JSONArray? = null
-lateinit var spinner: Spinner
-lateinit var amount: EditText
-lateinit var resultConvert: TextView
-lateinit var btnUpdate: Button
-lateinit var context: Context
-lateinit var showContext: Context
-lateinit var tvCurrencyRight: TextView
-lateinit var spinnerValute: ArrayAdapter<String>
-lateinit var recyclerView: RecyclerView
-var timer = Timer()
-
 class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
-    var valuteList = listOf<String>()
+    private lateinit var pref: SharedPreferences
+    private lateinit var spinner: Spinner
+    private lateinit var amount: EditText
+    private lateinit var resultConvert: TextView
+    private lateinit var btnUpdate: Button
+    private lateinit var currencySymbol: TextView
+    private lateinit var spinnerValute: ArrayAdapter<String>
+    private lateinit var recyclerView: RecyclerView
+
+    private var timer = Timer()
+    private var valuteList = listOf<String>()
+    private var exchangeRateList = listOf<ExchangeRate>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        context = this
-        showContext = applicationContext
 
-        Log.d("myLog", "начало ${exchangeRateList.size}")
-        // Log.d("myLog", "${exchangeRateList[0].toString()}")
+        Log.d(TAG, "start ${exchangeRateList.size}")
 
         pref = getSharedPreferences("DATE", MODE_PRIVATE) //созданние базы данных
 
-            /** инициализация View **/
+        /** инициализация View **/
         recyclerView = findViewById(R.id.recycler_view)
 
         btnUpdate = findViewById(R.id.btn_update)
         spinner = findViewById(R.id.sp_valute)
         amount = findViewById(R.id.et_amount)
         resultConvert = findViewById(R.id.tv_result_convert)
-        tvCurrencyRight = findViewById(R.id.tv_char_ed_right)
+        currencySymbol = findViewById(R.id.tv_char_ed_right)
 
+        //обновление данных если отсутствует сохраннение в БД
+        if (!pref.contains(Key.JSON_STRING.key)) updateData()
 
-        if (!pref.contains(Key.JSON_STRING.key)) getBtnUpdate()//обновление данных если отсутствует сохраннение в БД
-        val jsStr = pref.getString(Key.JSON_STRING.key, getJsounString()) // получение Json в формате String из БД
+        // получение Json в формате String из БД
+        val jsonString = pref.getString(
+            Key.JSON_STRING.key,
+            fetchJsonString()
+        )
 
-        Log.d("myTag", "end = ${exchangeRateList.size}")
+        Log.d(TAG, "end ${exchangeRateList.size}")
 
-        if (isOnline(this)) {
+        if (isInternetAvailable(this)) {
             autoUpdate() // запуск автообноления
         }
 
-
-         // ручное обновление
+        // ручное обновление
         btnUpdate.setOnClickListener {
+            timer.cancel()
+            timer = Timer()
 
-            if (timer != null) {
-                timer.cancel()
-                timer = Timer()
-
+            if (isInternetAvailable(this)) {
+                updateData()
+                autoUpdate()
+            } else {
+                showToast("No internet")
             }
-            getBtnUpdate()
-            autoUpdate()
         }
 
-
-        exchangeRateList = date(jsStr ?: getJsounString()) // заполнение списка валют с данными
+        // заполнение списка валют с данными
+        exchangeRateList = getData(jsonString ?: fetchJsonString()) ?: emptyList()
 
         updateRecycler() // загрузка списка данных для отображение в RecyclerView
 
-        valuteList = getValuteList(exchangeRateList)  // получение списка валют для Spinner
-        btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())?: getCurrentDate()// отображение даты обновления
+        valuteList = exchangeRateList.map { it.charCode }  // получение списка валют для Spinner
+        btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())
+            ?: getCurrentDate() // отображение даты обновления
 
         spinnerValute = ArrayAdapter(this, android.R.layout.simple_spinner_item, valuteList)
         spinnerValute.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
-        spinner.setAdapter(spinnerValute)
+        spinner.adapter = spinnerValute
         spinner.onItemSelectedListener = this
 
         amount.setOnClickListener {
@@ -99,138 +101,136 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         }
     }
 
+    override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
+        // обработка полученной в спиннере валюты
+
+        val rate = exchangeRateList.find { valuteList[pos] == it.charCode }
+        val converterResult = getValueData(checkNotNull(rate), amount.text.toString())
+
+//        amount.setOnKeyListener(KeyListener(converterResult))
+        amount.setOnKeyListener { editText, code, event ->
+            if (event?.action == KeyEvent.ACTION_DOWN &&
+                code == KeyEvent.KEYCODE_ENTER
+            ) {
+                resultConvert.text = converterResult.result
+                currencySymbol.text = converterResult.symbol
+                resultConvert.clearFocus()
+                resultConvert.isCursorVisible = false
+                handleKeyEvent(editText!!, code)
+                return@setOnKeyListener true
+            }
+            false
+        }
+        resultConvert.text = converterResult.result
+        currencySymbol.text = converterResult.symbol
+        amount.setText(converterResult.rubles)
+
+    }
+
+    override fun onNothingSelected(parent: AdapterView<*>?) {}
+
+    fun updateData() {
+        if (isInternetAvailable(this)) {
+            val currentDate = getCurrentDate()
+            val jsonString = fetchJsonString()
+            val data = getData(jsonString)
+
+            btnUpdate.text = currentDate
+            if (data != null) {
+                exchangeRateList = data
+                saveData(jsonString, currentDate)
+            } else {
+                showToast("Incorrect JSON from server!")
+            }
+
+            updateRecycler()
+        }
+    }
+
     private fun handleKeyEvent(view: View, keyCode: Int): Boolean {
         if (keyCode == KeyEvent.KEYCODE_ENTER) {
-            // Hide the keyboard
+            // скрыть клавиатуру
             val inputMethodManager =
-                    getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
             return true
         }
         return false
     }
 
+    private fun updateRecycler() {
+        recyclerView.layoutManager = LinearLayoutManager(MainActivity())
+        recyclerView.adapter = CustomRecyclerAdapter(exchangeRateList)
+    }
 
-//получаю валюту выбранную в Spinner
-    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
-
-        fun creativeListDate(): List<String> {
-            return getValuteListData(valuteList[position], amount.text.toString()?: "1.0")
-
+    private fun saveData(jsString: String, currentDate: String) {
+        pref.edit().apply {
+            putString(Key.JSON_STRING.key, jsString)
+            putString(Key.CURRENT_DATE.key, currentDate)
+            apply()
         }
-
-        amount.setOnKeyListener(object : View.OnKeyListener {
-
-            override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
-
-                if (event?.action == KeyEvent.ACTION_DOWN &&
-                    keyCode == KeyEvent.KEYCODE_ENTER
-                ) {
-                    val listDate = creativeListDate()
-                    resultConvert.text = listDate[1]
-                    tvCurrencyRight.text = listDate[2]
-                    resultConvert.clearFocus()
-                    resultConvert.isCursorVisible = false
-                    handleKeyEvent(v!!, keyCode)
-                    return true
-                }
-                return false
-            }
-        })
-        resultConvert.text = creativeListDate()[1]
-    tvCurrencyRight.text = creativeListDate()[2]
-        amount.setText(creativeListDate()[0])
-
     }
 
-    override fun onNothingSelected(p0: AdapterView<*>?) {
-        TODO("Not yet implemented")
-    }
-}
-fun updateRecycler() {
-    recyclerView.layoutManager = LinearLayoutManager(MainActivity())
-    recyclerView.adapter = CustomRecyclerAdapter(exchangeRateList)
-}
+    private fun autoUpdate() {
+        val updatePeriodMinutes = 0.1
+        val updatePeriod = (60 * 1000 * updatePeriodMinutes).toLong()
 
-private fun saveDate(jsString: String, currentDate: String) {
-
-    val editor: SharedPreferences.Editor = pref.edit()
-    editor.putString(Key.JSON_STRING.key, jsString)
-    editor.putString(Key.CURRENT_DATE.key, currentDate)
-    editor.apply()
-}
-fun autoUpdate(){
-     val timeUpdateMinute = 5L
-     val timeUpdate: Long = 60 * 1000 * timeUpdateMinute
-
-    timer.schedule(
-        object : TimerTask() {
-
+        val timerTask = object : TimerTask() {
             override fun run() {
-
-                CoroutineScope(Dispatchers.Main).launch {
-
-                    getBtnUpdate()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.Main) { updateData() }
                 }
             }
-        },
-        timeUpdate,
-        timeUpdate
-    )
-    Log.d("testUpdate","1${timer== null}")
- }
-
-fun getBtnUpdate() {
-
-if (context != null && isOnline(context)) {
-
-    val currentDate = getCurrentDate()
-    btnUpdate.text = currentDate
-    val jsonString = getJsounString()
-    exchangeRateList = date(jsonString)
-
-    saveDate(jsonString, currentDate)
-    updateRecycler()
-} else {
-    var toast = Toast.makeText(showContext, "Connection error!",Toast.LENGTH_LONG)
-
-    toast.setGravity(Gravity.TOP, 0, 200)
-    toast.show()
-}
-
-
-}
-
-fun getCurrentDate(): String {
-    val time = Date()
-    val sdf = SimpleDateFormat("dd MMMM HH:mm:ss")
-
-    return sdf.format(time)
-}
-
-
-
-fun getJsounString(): String {
-
-    val url = "https://www.cbr-xml-daily.ru/daily_json.js"
-    var jsReturnString = ""
-    if (context != null && isOnline(context)) {
-        val globalJob = GlobalScope.launch {
-            jsReturnString = URL(url).readText()
         }
-        runBlocking {
-            globalJob.join()
+        timer.schedule(timerTask, updatePeriod, updatePeriod)
+        Log.d(TAG, "autoUpdate: <->")
+    }
+
+    private fun getCurrentDate(): String {
+        val time = Date()
+        val dateFormat = SimpleDateFormat("dd MMMM HH:mm:ss", Locale.ENGLISH)
+
+        return dateFormat.format(time)
+    }
+
+    private fun fetchJsonString(): String = runBlocking {
+        Log.e(TAG, "fetchJsonString: jsonAccessed")
+        val url = "https://www.cbr-xml-daily.ru/daily_json.js"
+        var serverResponse = ""
+        if (isInternetAvailable(this@MainActivity)) {
+            serverResponse = withContext(Dispatchers.IO) {
+                URL(url).readText()
+            }
+        } else showToast("No internet")
+        serverResponse
+    }
+
+    private fun showToast(text: String) {
+        val toast = Toast.makeText(this, text, Toast.LENGTH_LONG)
+        toast.setGravity(Gravity.TOP, 0, 200)
+        toast.show()
+    }
+
+    inner class KeyListener(private val result: ConverterResult) : View.OnKeyListener {
+
+        override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
+            if (event?.action == KeyEvent.ACTION_DOWN &&
+                keyCode == KeyEvent.KEYCODE_ENTER
+            ) {
+                resultConvert.text = result.result
+                currencySymbol.text = result.symbol
+                resultConvert.clearFocus()
+                resultConvert.isCursorVisible = false
+                handleKeyEvent(v!!, keyCode)
+                return true
+            }
+            return false
         }
-    } else {
-//        Toast.makeText(MainActivity(), "Connection Error!",Toast.LENGTH_SHORT).show()
 
     }
 
-    return jsReturnString
+    companion object {
+        val TAG = "${MainActivity::class.java.simpleName}_TAG"
+    }
+
 }
-
-
-
-
-
-

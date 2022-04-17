@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "com.ivanshulin.myexchange"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 32
         versionCode 1
         versionName "1.0"
@@ -40,6 +40,11 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.android.material:material:1.5.0'
     implementation 'org.jsoup:jsoup:1.13.1'
+
+    def livedata_version = "2.4.1"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$livedata_version"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$livedata_version"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$livedata_version"
 
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9'
 
