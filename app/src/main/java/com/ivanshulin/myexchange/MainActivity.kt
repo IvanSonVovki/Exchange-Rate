@@ -20,12 +20,12 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var pref: SharedPreferences
     private lateinit var spinner: Spinner
     private lateinit var amount: EditText
-    private lateinit var resultConvert: TextView
+    private lateinit var resultConvert: EditText
     private lateinit var btnUpdate: Button
     private lateinit var currencySymbol: TextView
     private lateinit var spinnerValute: ArrayAdapter<String>
@@ -49,9 +49,14 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         btnUpdate = findViewById(R.id.btn_update)
         spinner = findViewById(R.id.sp_valute)
         amount = findViewById(R.id.et_amount)
-        resultConvert = findViewById(R.id.tv_result_convert)
+        resultConvert = findViewById(R.id.et_convert_result)
         currencySymbol = findViewById(R.id.tv_char_ed_right)
 
+        /*
+        * Запуск корутины в контексте жизненного цикла активити,
+        * корутина не блокирует текущий поток. То есть то что происходит в блоке launch {}
+        * будет выполняться парллельно с тем что выполняется что идёт после
+        * */
         lifecycleScope.launch {
             //обновление данных если отсутствует сохраннение в БД
             if (!pref.contains(Key.JSON_STRING.key)) updateData()
@@ -64,13 +69,17 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
             // заполнение списка валют с данными
             exchangeRateList = getData(jsonString ?: fetchJsonString()) ?: emptyList()
 
+            // получение списка валют для Spinner
+            valuteList = exchangeRateList.map { it.charCode }
+
             Log.d(TAG, "end ${exchangeRateList.size}")
 
             updateRecycler() // загрузка списка данных для отображение в RecyclerView
         }
+        // Программа продолжает выполенеине без остановки или ожидания.
 
         if (isInternetAvailable(this)) {
-            autoUpdate() // запуск автообноления
+            launchAutoUpdate() // запуск автообноления
         }
 
         // ручное обновление
@@ -80,11 +89,10 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
             if (isInternetAvailable(this)) {
                 updateData()
-                autoUpdate()
+                launchAutoUpdate()
             } else showToast("No internet")
         }
 
-        valuteList = exchangeRateList.map { it.charCode }  // получение списка валют для Spinner
         btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())
             ?: getCurrentDate() // отображение даты обновления
 
@@ -92,40 +100,35 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         spinnerValute.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
         spinner.adapter = spinnerValute
-        spinner.onItemSelectedListener = this
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?, view: View?, pos: Int, id: Long
+            ) = updateEditText()
 
-        amount.setOnClickListener {
-            amount.text.clear()
+            override fun onNothingSelected(parent: AdapterView<*>?) = updateEditText()
         }
-    }
-
-    override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
-        // обработка полученной в спиннере валюты
-
-        val rate = exchangeRateList.find { valuteList[pos] == it.charCode }
-        val converterResult = getValueData(checkNotNull(rate), amount.text.toString())
 
         amount.setOnKeyListener { editText, code, event ->
-            if (event?.action == KeyEvent.ACTION_DOWN &&
-                code == KeyEvent.KEYCODE_ENTER
-            ) {
-                resultConvert.text = converterResult.result
-                currencySymbol.text = converterResult.symbol
-                resultConvert.clearFocus()
-                resultConvert.isCursorVisible = false
-                handleKeyEvent(editText!!, code)
+            if (code == KeyEvent.KEYCODE_ENTER) {
+                amount.clearFocus()
+                updateEditText() // обновление текста и поля ввода
+
+                // скрыть клавиатуру
+                val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE)
+                val flag = InputMethodManager.RESULT_UNCHANGED_SHOWN
+
+                (inputMethodManager as InputMethodManager)
+                    .hideSoftInputFromWindow(amount.windowToken, flag)
+
                 return@setOnKeyListener true
             }
             false
         }
-        resultConvert.text = converterResult.result
-        currencySymbol.text = converterResult.symbol
-        amount.setText(converterResult.rubles)
-
     }
 
-    override fun onNothingSelected(parent: AdapterView<*>?) {}
-
+    /**
+     * Был выполенен запрос на загрузку данных. Запускаем корутину.
+     */
     fun updateData() = lifecycleScope.launch {
         Log.e(TAG, "updateData: called")
         if (isInternetAvailable(this@MainActivity)) {
@@ -144,15 +147,13 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         }
     }
 
-    private fun handleKeyEvent(view: View, keyCode: Int): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_ENTER) {
-            // скрыть клавиатуру
-            val inputMethodManager =
-                getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
-            return true
-        }
-        return false
+    private fun updateEditText() {
+        val rate = exchangeRateList.find { spinner.selectedItem.toString() == it.charCode }
+        val converterResult = getValueData(checkNotNull(rate), amount.text.toString())
+
+        amount.setText(converterResult.rubles)
+        resultConvert.setText(converterResult.result)
+        currencySymbol.text = converterResult.symbol
     }
 
     private fun updateRecycler() {
@@ -169,7 +170,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         }
     }
 
-    private fun autoUpdate() {
+    private fun launchAutoUpdate() {
         val updatePeriodMinutes = 5
         val updatePeriod = (60 * 1000 * updatePeriodMinutes).toLong()
 
@@ -195,13 +196,19 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         toast.show()
     }
 
+    /**
+     * Функция, способная приостанавливать своё выполнение помечена модификатором suspend.
+     * Внутри неё используется переключение на IO диспетчер, который делегирует выполенение
+     * блокирующих операций ввода/вывода пулу потоков
+     */
     private suspend fun fetchJsonString(): String {
-        Log.e(TAG, "fetchJsonString: jsonAccessed")
+        Log.e(TAG, "fetchJsonString: jsonRequested")
         val url = "https://www.cbr-xml-daily.ru/daily_json.js"
         var serverResponse = ""
 
         @Suppress("BlockingMethodInNonBlockingContext")
         if (isInternetAvailable(this)) {
+            // выполнение запроса в другом контексте
             serverResponse = withContext(Dispatchers.IO) { URL(url).readText() }
         } else showToast("No internet")
 

@@ -18,14 +18,14 @@
 
 
     <TextView
-        android:id="@+id/textView5"
+        android:id="@+id/tv_updated"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:gravity="end"
         android:text="@string/date_update"
         android:textColor="@color/white"
-        android:textSize="8sp"
+        android:textSize="11sp"
         app:layout_constraintEnd_toEndOf="@+id/btn_update"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -38,7 +38,7 @@
         android:text="@string/date_update"
         app:backgroundTint="#2F4210"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView5" />
+        app:layout_constraintTop_toBottomOf="@+id/tv_updated" />
 
     <LinearLayout
         android:id="@+id/linearLayout"
@@ -145,17 +145,20 @@
             android:background="#9CA2C6"
             android:spinnerMode="dropdown" />
 
-
-        <TextView
-            android:id="@+id/tv_result_convert"
+        <EditText
+            android:id="@+id/et_convert_result"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#CDC6C6"
+            android:background="#D8C6C6"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/black"
+            android:enabled="false"
             android:fontFamily="sans-serif-medium"
-            android:text="@string/out_convert"
-            android:textAlignment="center"
-            android:textSize="20sp" />
+            android:gravity="center"
+            android:inputType="numberDecimal"
+            android:text="@string/amount" />
 
         <TextView
             android:id="@+id/tv_char_ed_right"

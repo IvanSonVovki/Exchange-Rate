@@ -1,11 +1,9 @@
 <resources>
     <string name="app_name">my exchange</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="amount">0.0</string>
     <string name="out_convert">0.0</string>
     <string name="convert">конвертировать</string>
-    <string name="date_update">обновленно</string>
+    <string name="date_update">обновлено</string>
     <string name="tv_char_ed_left">₽</string>
     <string name="tv_char_right">a</string> />
 </resources>

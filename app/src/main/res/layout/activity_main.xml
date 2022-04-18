@@ -7,6 +7,10 @@
     android:background="#3F7A4C"
     tools:context=".MainActivity">
 
+    <!--
+    Прогресс бар для того чтобы видеть, что UI не виснет при загрзуке.
+    Нужен лишь в целях иллюстрации. Можно легко удалить.
+    -->
     <ProgressBar
         android:id="@+id/progressbar"
         android:layout_width="wrap_content"
@@ -17,7 +21,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/textView5"
+        android:id="@+id/tv_updated"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
@@ -37,7 +41,7 @@
         android:text="@string/date_update"
         app:backgroundTint="#2F4210"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView5" />
+        app:layout_constraintTop_toBottomOf="@+id/tv_updated" />
 
     <LinearLayout
         android:id="@+id/linearLayout"
@@ -145,17 +149,20 @@
 
             android:spinnerMode="dropdown" />
 
-
-        <TextView
-            android:id="@+id/tv_result_convert"
+        <EditText
+            android:id="@+id/et_convert_result"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#CDC6C6"
+            android:background="#D8C6C6"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/black"
+            android:enabled="false"
             android:fontFamily="sans-serif-medium"
-            android:text="@string/out_convert"
-            android:textAlignment="center"
-            android:textSize="20sp" />
+            android:gravity="center"
+            android:inputType="numberDecimal"
+            android:text="@string/amount" />
 
         <TextView
             android:id="@+id/tv_char_ed_right"
