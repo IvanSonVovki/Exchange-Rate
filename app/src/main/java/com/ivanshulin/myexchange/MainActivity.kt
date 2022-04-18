@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
             exchangeRateList = getData(jsonString ?: fetchJsonString()) ?: emptyList()
 
             Log.d(TAG, "end ${exchangeRateList.size}")
+
+            updateRecycler() // загрузка списка данных для отображение в RecyclerView
         }
 
         if (isInternetAvailable(this)) {
@@ -77,12 +79,10 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
             timer = Timer()
 
             if (isInternetAvailable(this)) {
-                lifecycleScope.launch { updateData() }
+                updateData()
                 autoUpdate()
             } else showToast("No internet")
         }
-
-        updateRecycler() // загрузка списка данных для отображение в RecyclerView
 
         valuteList = exchangeRateList.map { it.charCode }  // получение списка валют для Spinner
         btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())
@@ -126,6 +126,24 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
     override fun onNothingSelected(parent: AdapterView<*>?) {}
 
+    fun updateData() = lifecycleScope.launch {
+        Log.e(TAG, "updateData: called")
+        if (isInternetAvailable(this@MainActivity)) {
+            val currentDate = getCurrentDate()
+            val jsonString = fetchJsonString()
+            val data = getData(jsonString)
+
+            btnUpdate.text = currentDate
+            if (data != null) {
+                exchangeRateList = data
+                saveData(jsonString, currentDate)
+            } else showToast("Incorrect JSON from server!")
+
+            updateRecycler()
+            Log.e(TAG, "updateData: completed")
+        }
+    }
+
     private fun handleKeyEvent(view: View, keyCode: Int): Boolean {
         if (keyCode == KeyEvent.KEYCODE_ENTER) {
             // скрыть клавиатуру
@@ -138,6 +156,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
     }
 
     private fun updateRecycler() {
+        Log.e(TAG, "updateRecycler: called ${exchangeRateList.size}")
         recyclerView.layoutManager = LinearLayoutManager(MainActivity())
         recyclerView.adapter = CustomRecyclerAdapter(exchangeRateList)
     }
@@ -174,22 +193,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         val toast = Toast.makeText(this, text, Toast.LENGTH_LONG)
         toast.setGravity(Gravity.TOP, 0, 200)
         toast.show()
-    }
-
-    suspend fun updateData() {
-        if (isInternetAvailable(this)) {
-            val currentDate = getCurrentDate()
-            val jsonString = fetchJsonString()
-            val data = getData(jsonString)
-
-            btnUpdate.text = currentDate
-            if (data != null) {
-                exchangeRateList = data
-                saveData(jsonString, currentDate)
-            } else showToast("Incorrect JSON from server!")
-
-            updateRecycler()
-        }
     }
 
     private suspend fun fetchJsonString(): String {
