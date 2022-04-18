@@ -15,7 +15,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -53,16 +52,20 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         resultConvert = findViewById(R.id.tv_result_convert)
         currencySymbol = findViewById(R.id.tv_char_ed_right)
 
-        //обновление данных если отсутствует сохраннение в БД
-        if (!pref.contains(Key.JSON_STRING.key)) updateData()
+        lifecycleScope.launch {
+            //обновление данных если отсутствует сохраннение в БД
+            if (!pref.contains(Key.JSON_STRING.key)) updateData()
 
-        // получение Json в формате String из БД
-        val jsonString = pref.getString(
-            Key.JSON_STRING.key,
-            fetchJsonString()
-        )
+            // получение Json в формате String из БД
+            val jsonString = pref.getString(
+                Key.JSON_STRING.key,
+                fetchJsonString()
+            )
+            // заполнение списка валют с данными
+            exchangeRateList = getData(jsonString ?: fetchJsonString()) ?: emptyList()
 
-        Log.d(TAG, "end ${exchangeRateList.size}")
+            Log.d(TAG, "end ${exchangeRateList.size}")
+        }
 
         if (isInternetAvailable(this)) {
             autoUpdate() // запуск автообноления
@@ -74,15 +77,10 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
             timer = Timer()
 
             if (isInternetAvailable(this)) {
-                updateData()
+                lifecycleScope.launch { updateData() }
                 autoUpdate()
-            } else {
-                showToast("No internet")
-            }
+            } else showToast("No internet")
         }
-
-        // заполнение списка валют с данными
-        exchangeRateList = getData(jsonString ?: fetchJsonString()) ?: emptyList()
 
         updateRecycler() // загрузка списка данных для отображение в RecyclerView
 
@@ -107,7 +105,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         val rate = exchangeRateList.find { valuteList[pos] == it.charCode }
         val converterResult = getValueData(checkNotNull(rate), amount.text.toString())
 
-//        amount.setOnKeyListener(KeyListener(converterResult))
         amount.setOnKeyListener { editText, code, event ->
             if (event?.action == KeyEvent.ACTION_DOWN &&
                 code == KeyEvent.KEYCODE_ENTER
@@ -128,24 +125,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
     }
 
     override fun onNothingSelected(parent: AdapterView<*>?) {}
-
-    fun updateData() {
-        if (isInternetAvailable(this)) {
-            val currentDate = getCurrentDate()
-            val jsonString = fetchJsonString()
-            val data = getData(jsonString)
-
-            btnUpdate.text = currentDate
-            if (data != null) {
-                exchangeRateList = data
-                saveData(jsonString, currentDate)
-            } else {
-                showToast("Incorrect JSON from server!")
-            }
-
-            updateRecycler()
-        }
-    }
 
     private fun handleKeyEvent(view: View, keyCode: Int): Boolean {
         if (keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -172,14 +151,12 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
     }
 
     private fun autoUpdate() {
-        val updatePeriodMinutes = 0.1
+        val updatePeriodMinutes = 5
         val updatePeriod = (60 * 1000 * updatePeriodMinutes).toLong()
 
         val timerTask = object : TimerTask() {
             override fun run() {
-                lifecycleScope.launch {
-                    withContext(Dispatchers.Main) { updateData() }
-                }
+                lifecycleScope.launch(Dispatchers.Main) { updateData() }
             }
         }
         timer.schedule(timerTask, updatePeriod, updatePeriod)
@@ -193,40 +170,39 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         return dateFormat.format(time)
     }
 
-    private fun fetchJsonString(): String = runBlocking {
-        Log.e(TAG, "fetchJsonString: jsonAccessed")
-        val url = "https://www.cbr-xml-daily.ru/daily_json.js"
-        var serverResponse = ""
-        if (isInternetAvailable(this@MainActivity)) {
-            serverResponse = withContext(Dispatchers.IO) {
-                URL(url).readText()
-            }
-        } else showToast("No internet")
-        serverResponse
-    }
-
     private fun showToast(text: String) {
         val toast = Toast.makeText(this, text, Toast.LENGTH_LONG)
         toast.setGravity(Gravity.TOP, 0, 200)
         toast.show()
     }
 
-    inner class KeyListener(private val result: ConverterResult) : View.OnKeyListener {
+    suspend fun updateData() {
+        if (isInternetAvailable(this)) {
+            val currentDate = getCurrentDate()
+            val jsonString = fetchJsonString()
+            val data = getData(jsonString)
 
-        override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
-            if (event?.action == KeyEvent.ACTION_DOWN &&
-                keyCode == KeyEvent.KEYCODE_ENTER
-            ) {
-                resultConvert.text = result.result
-                currencySymbol.text = result.symbol
-                resultConvert.clearFocus()
-                resultConvert.isCursorVisible = false
-                handleKeyEvent(v!!, keyCode)
-                return true
-            }
-            return false
+            btnUpdate.text = currentDate
+            if (data != null) {
+                exchangeRateList = data
+                saveData(jsonString, currentDate)
+            } else showToast("Incorrect JSON from server!")
+
+            updateRecycler()
         }
+    }
 
+    private suspend fun fetchJsonString(): String {
+        Log.e(TAG, "fetchJsonString: jsonAccessed")
+        val url = "https://www.cbr-xml-daily.ru/daily_json.js"
+        var serverResponse = ""
+
+        @Suppress("BlockingMethodInNonBlockingContext")
+        if (isInternetAvailable(this)) {
+            serverResponse = withContext(Dispatchers.IO) { URL(url).readText() }
+        } else showToast("No internet")
+
+        return serverResponse
     }
 
     companion object {

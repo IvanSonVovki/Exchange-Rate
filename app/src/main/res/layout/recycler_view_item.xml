@@ -8,7 +8,6 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="72dp"
-
         android:layout_marginStart="3dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
@@ -19,7 +18,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:id="@+id/textView"
+            android:id="@+id/tv_item_char_code"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1.3"
@@ -32,13 +31,11 @@
             android:maxLines="1"
             android:paddingStart="4dp"
             android:text="TextView"
-
             android:textColor="#EBF4F2"
-
             android:textStyle="italic" />
 
         <TextView
-            android:id="@+id/textView2"
+            android:id="@+id/tv_item_name"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginStart="5dp"
@@ -55,7 +52,7 @@
             android:textColor="#EBF4F2" />
 
         <TextView
-            android:id="@+id/textView3"
+            android:id="@+id/tv_item_nominal"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginStart="5dp"
@@ -81,7 +78,7 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/textView4"
+                android:id="@+id/tv_cost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
@@ -102,7 +99,6 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
                 android:layout_marginTop="6dp"
-
                 android:layout_marginEnd="4dp"
                 android:layout_weight="1.5"
                 android:gravity="end"
