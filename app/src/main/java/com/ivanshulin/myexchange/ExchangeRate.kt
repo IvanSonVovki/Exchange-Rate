@@ -17,7 +17,7 @@ data class ExchangeRate(
     val date: String
 )
 
-fun getData(jsonString: String): List<ExchangeRate>? = try {
+fun getData(jsonString: String?): List<ExchangeRate>? = try {
     val jsonResponse = JSONTokener(jsonString).nextValue() as JSONObject
     val jsonValute = jsonResponse.getJSONObject("Valute")
 

@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var resultConvert: EditText
     private lateinit var btnUpdate: Button
     private lateinit var currencySymbol: TextView
-    private lateinit var spinnerValute: ArrayAdapter<String>
+    private lateinit var adapter: ArrayAdapter<String>
     private lateinit var recyclerView: RecyclerView
 
     private var timer = Timer()
@@ -39,9 +39,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        Log.d(TAG, "start ${exchangeRateList.size}")
-
-        pref = getSharedPreferences("DATE", MODE_PRIVATE) //созданние базы данных
+        // получение preferences или созданние если их не было
+        pref = getSharedPreferences("DATE", MODE_PRIVATE)
 
         /** инициализация View **/
         recyclerView = findViewById(R.id.recycler_view)
@@ -55,51 +54,53 @@ class MainActivity : AppCompatActivity() {
         /*
         * Запуск корутины в контексте жизненного цикла активити,
         * корутина не блокирует текущий поток. То есть то что происходит в блоке launch {}
-        * будет выполняться парллельно с тем что выполняется что идёт после
+        * будет выполняться парллельно с тем что идёт после
         * */
         lifecycleScope.launch {
-            //обновление данных если отсутствует сохраннение в БД
-            if (!pref.contains(Key.JSON_STRING.key)) updateData()
+            // получение данных из сети если есть интренет, иначе из preferences
+            val jsonString = if (isInternetAvailable(this@MainActivity))
+                saveFetchJsonString()
+            else
+                pref.getString(Key.JSON_STRING.key, null)
 
-            // получение Json в формате String из БД
-            val jsonString = pref.getString(
-                Key.JSON_STRING.key,
-                fetchJsonString()
-            )
-            // заполнение списка валют с данными
-            exchangeRateList = getData(jsonString ?: fetchJsonString()) ?: emptyList()
+            // парсинг json в список валют
+            exchangeRateList = getData(jsonString) ?: emptyList()
+            Log.d(TAG, "size of list ${exchangeRateList.size}")
 
-            // получение списка валют для Spinner
+            // подготовка списка валют для спинера
             valuteList = exchangeRateList.map { it.charCode }
 
-            Log.d(TAG, "end ${exchangeRateList.size}")
+            // настройка адаптера для спинера
+            val resId = android.R.layout.simple_spinner_item
+            adapter = ArrayAdapter(this@MainActivity, resId, valuteList)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinner.adapter = adapter
 
-            updateRecycler() // загрузка списка данных для отображение в RecyclerView
+            // отображение даты обновления на кнопке
+            btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())
+
+            // загрузка списка данных для отображение в RecyclerView
+            updateRecycler()
         }
+
         // Программа продолжает выполенеине без остановки или ожидания.
 
-        if (isInternetAvailable(this)) {
+        if (isInternetAvailable(this@MainActivity)) {
             launchAutoUpdate() // запуск автообноления
         }
 
-        // ручное обновление
+        // Весим слушатели на кнопку, спиннер и поле ввода
+
         btnUpdate.setOnClickListener {
             timer.cancel()
             timer = Timer()
 
-            if (isInternetAvailable(this)) {
+            if (isInternetAvailable(this@MainActivity)) {
                 updateData()
                 launchAutoUpdate()
             } else showToast("No internet")
         }
 
-        btnUpdate.text = pref.getString(Key.CURRENT_DATE.key, getCurrentDate())
-            ?: getCurrentDate() // отображение даты обновления
-
-        spinnerValute = ArrayAdapter(this, android.R.layout.simple_spinner_item, valuteList)
-        spinnerValute.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
-        spinner.adapter = spinnerValute
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
                 parent: AdapterView<*>?, view: View?, pos: Int, id: Long
@@ -124,27 +125,26 @@ class MainActivity : AppCompatActivity() {
             }
             false
         }
+
     }
 
     /**
-     * Был выполенен запрос на загрузку данных. Запускаем корутину.
+     * Загружает данные из сети и сохраняет в preferences.
+     * Функция, способная приостанавливать своё выполнение помечена модификатором suspend.
+     * Внутри неё используется переключение на IO диспетчер, который делегирует выполенение
+     * блокирующих операций ввода/вывода пулу потоков.
      */
     fun updateData() = lifecycleScope.launch {
         Log.e(TAG, "updateData: called")
-        if (isInternetAvailable(this@MainActivity)) {
-            val currentDate = getCurrentDate()
-            val jsonString = fetchJsonString()
-            val data = getData(jsonString)
 
-            btnUpdate.text = currentDate
-            if (data != null) {
-                exchangeRateList = data
-                saveData(jsonString, currentDate)
-            } else showToast("Incorrect JSON from server!")
+        val jsonString = saveFetchJsonString()
+        exchangeRateList = getData(jsonString) ?: emptyList<ExchangeRate>()
+            .also { showToast("Incorrect JSON from server") }
 
-            updateRecycler()
-            Log.e(TAG, "updateData: completed")
-        }
+        btnUpdate.text = getCurrentDate()
+        updateRecycler()
+
+        Log.e(TAG, "updateData: completed")
     }
 
     private fun updateEditText() {
@@ -160,14 +160,6 @@ class MainActivity : AppCompatActivity() {
         Log.e(TAG, "updateRecycler: called ${exchangeRateList.size}")
         recyclerView.layoutManager = LinearLayoutManager(MainActivity())
         recyclerView.adapter = CustomRecyclerAdapter(exchangeRateList)
-    }
-
-    private fun saveData(jsString: String, currentDate: String) {
-        pref.edit().apply {
-            putString(Key.JSON_STRING.key, jsString)
-            putString(Key.CURRENT_DATE.key, currentDate)
-            apply()
-        }
     }
 
     private fun launchAutoUpdate() {
@@ -196,12 +188,21 @@ class MainActivity : AppCompatActivity() {
         toast.show()
     }
 
+    private fun saveData(data: String, currentDate: String) {
+        pref.edit().apply {
+            putString(Key.JSON_STRING.key, data)
+            putString(Key.CURRENT_DATE.key, currentDate)
+            apply()
+        }
+    }
+
     /**
+     * Загружает данные из сети и сохраняет в preferences.
      * Функция, способная приостанавливать своё выполнение помечена модификатором suspend.
      * Внутри неё используется переключение на IO диспетчер, который делегирует выполенение
-     * блокирующих операций ввода/вывода пулу потоков
+     * блокирующих операций ввода/вывода пулу потоков.
      */
-    private suspend fun fetchJsonString(): String {
+    private suspend fun saveFetchJsonString(): String {
         Log.e(TAG, "fetchJsonString: jsonRequested")
         val url = "https://www.cbr-xml-daily.ru/daily_json.js"
         var serverResponse = ""
@@ -210,6 +211,8 @@ class MainActivity : AppCompatActivity() {
         if (isInternetAvailable(this)) {
             // выполнение запроса в другом контексте
             serverResponse = withContext(Dispatchers.IO) { URL(url).readText() }
+            // сохранение результата
+            saveData(serverResponse, getCurrentDate())
         } else showToast("No internet")
 
         return serverResponse
