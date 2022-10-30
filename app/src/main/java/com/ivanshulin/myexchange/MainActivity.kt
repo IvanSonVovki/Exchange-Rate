@@ -1,6 +1,5 @@
 package com.ivanshulin.myexchange
 
-import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
@@ -115,7 +114,7 @@ class MainActivity : AppCompatActivity() {
                 updateEditText() // обновление текста и поля ввода
 
                 // скрыть клавиатуру
-                val inputMethodManager = getSystemService(Context.INPUT_METHOD_SERVICE)
+                val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE)
                 val flag = InputMethodManager.RESULT_UNCHANGED_SHOWN
 
                 (inputMethodManager as InputMethodManager)
